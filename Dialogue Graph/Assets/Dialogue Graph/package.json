@@ -1,13 +1,12 @@
 {
   "name": "com.pg.dialogue-graph",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "displayName": "PG Dialogue Graph",
   "description": "Dialogue graph has been created with Unity Graph Toolkit. It is recommended to work with Unity 6.2 and newer.",
-  "unity": "6000.2",
+  "unity": "6000.4",
   "type": "plugin",
   "dependencies": {
-    "com.unity.inputsystem": "1.14.2",
-    "com.unity.graphtoolkit": "0.4.0-exp.2"
+    "com.unity.inputsystem": "1.14.2"
   },
   "samples": [
     {

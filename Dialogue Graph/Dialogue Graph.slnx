@@ -1,0 +1,6 @@
+﻿<Solution>
+  <Project Path="PG.DialogueGraph.Editor.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="PG.DialogueGraph.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+</Solution>

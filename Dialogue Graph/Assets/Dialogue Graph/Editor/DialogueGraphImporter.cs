@@ -27,7 +27,7 @@ namespace PG.DialogueGraphEditor
             var startNode = editorGraph.GetNodes().OfType<StartNode>().FirstOrDefault();
             if (startNode != null)
             {
-                var entryPort = startNode.GetOutputPorts().FirstOrDefault()?.firstConnectedPort;
+                var entryPort = startNode.GetOutputPorts().FirstOrDefault()?.FirstConnectedPort;
                 if (entryPort != null)
                 {
                     runtimeGraph.entryNodeID = nodeIDMap[entryPort.GetNode()];
@@ -67,7 +67,7 @@ namespace PG.DialogueGraphEditor
             runtimeNode.speakerName = GetPortValue<string>(node.GetInputPortByName("Speaker"));
             runtimeNode.dialogueText = GetPortValue<string>(node.GetInputPortByName("Dialogue"));
 
-            var nextNodePort = node.GetOutputPortByName("out").firstConnectedPort;
+            var nextNodePort = node.GetOutputPortByName("out").FirstConnectedPort;
             if (nextNodePort != null)
             {
                 runtimeNode.nextNodeID = nodeIDMap[nextNodePort.GetNode()];
@@ -78,7 +78,7 @@ namespace PG.DialogueGraphEditor
             node.GetNodeOptionByName("Node Key").TryGetValue(out runtimeNode.nodeKey);
             runtimeNode.background = GetPortValue<Sprite>(node.GetInputPortByName("Background"));
 
-            var nextNodePort = node.GetOutputPortByName("out").firstConnectedPort;
+            var nextNodePort = node.GetOutputPortByName("out").FirstConnectedPort;
             if (nextNodePort != null)
             {
                 runtimeNode.nextNodeID = nodeIDMap[nextNodePort.GetNode()];
@@ -90,18 +90,18 @@ namespace PG.DialogueGraphEditor
             runtimeNode.speakerName = GetPortValue<string>(node.GetInputPortByName("Speaker"));
             runtimeNode.dialogueText = GetPortValue<string>(node.GetInputPortByName("Dialogue"));
 
-            var choiceOutputPorts = node.GetOutputPorts().Where(p => p.name.StartsWith("Choice "));
+            var choiceOutputPorts = node.GetOutputPorts().Where(p => p.Name.StartsWith("Choice "));
 
             foreach (var outputPort in choiceOutputPorts)
             {
-                var index = outputPort.name.Substring("Choice ".Length);
+                var index = outputPort.Name.Substring("Choice ".Length);
                 var textPort = node.GetInputPortByName($"Choice Text {index}");
 
                 var choiceData = new ChoiceData
                 {
                     choiceText = GetPortValue<string>(textPort),
-                    desinationNodeID = outputPort.firstConnectedPort != null
-                        ? nodeIDMap[outputPort.firstConnectedPort.GetNode()]
+                    desinationNodeID = outputPort.FirstConnectedPort != null
+                        ? nodeIDMap[outputPort.FirstConnectedPort.GetNode()]
                         : null
                 };
 
@@ -114,11 +114,11 @@ namespace PG.DialogueGraphEditor
         {
             if (port == null) return default;
 
-            if (port.isConnected)
+            if (port.IsConnected)
             {
-                if (port.firstConnectedPort.GetNode() is IVariableNode variableNode)
+                if (port.FirstConnectedPort.GetNode() is IVariableNode variableNode)
                 {
-                    variableNode.variable.TryGetDefaultValue(out T value);
+                    variableNode.Variable.TryGetDefaultValue(out T value);
                     return value;
                 }
             }
