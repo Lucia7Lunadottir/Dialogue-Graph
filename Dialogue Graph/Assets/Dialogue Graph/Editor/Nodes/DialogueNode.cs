@@ -12,7 +12,7 @@ namespace PG.DialogueGraphEditor
             context.AddInputPort("in").WithConnectorUI(PortConnectorUI.Arrowhead).Build();
 
             context.AddInputPort<string>("Speaker").Build();
-            context.AddInputPort<string>("Dialogue").Build();
+            context.AddInputPort<string>("Dialogue").AsTextArea(maxLines:10).Build();
         }
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
