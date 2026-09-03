@@ -43,9 +43,9 @@ public class AudioForDialogueNodeActivator : MonoBehaviour
         }
         if (_checkAudioTag)
         {
+            StopAllAudio();
             if (_audioSources.TryGetValue(runtimeDialogueNode.audioKey, out AudioSource audioSource))
             {
-                audioSource.Stop();
                 audioSource.resource = runtimeDialogueNode.audioResource;
                 audioSource.Play();
             }
