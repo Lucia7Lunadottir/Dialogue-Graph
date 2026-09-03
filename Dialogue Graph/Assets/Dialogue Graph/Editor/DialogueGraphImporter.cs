@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEditor.AssetImporters;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine.Audio;
 
 namespace PG.DialogueGraphEditor
 {
@@ -66,6 +67,8 @@ namespace PG.DialogueGraphEditor
             node.GetNodeOptionByName("Node Key").TryGetValue(out runtimeNode.nodeKey);
             runtimeNode.speakerName = GetPortValue<string>(node.GetInputPortByName("Speaker"));
             runtimeNode.dialogueText = GetPortValue<string>(node.GetInputPortByName("Dialogue"));
+            runtimeNode.audioKey = GetPortValue<string>(node.GetInputPortByName("AudioKey"));
+            runtimeNode.audioResource = GetPortValue<AudioResource>(node.GetInputPortByName("Audio"));
 
             var nextNodePort = node.GetOutputPortByName("out").FirstConnectedPort;
             if (nextNodePort != null)
@@ -89,6 +92,8 @@ namespace PG.DialogueGraphEditor
             node.GetNodeOptionByName("Node Key").TryGetValue(out runtimeNode.nodeKey);
             runtimeNode.speakerName = GetPortValue<string>(node.GetInputPortByName("Speaker"));
             runtimeNode.dialogueText = GetPortValue<string>(node.GetInputPortByName("Dialogue"));
+            runtimeNode.audioKey = GetPortValue<string>(node.GetInputPortByName("AudioKey"));
+            runtimeNode.audioResource = GetPortValue<AudioResource>(node.GetInputPortByName("Audio"));
 
             var choiceOutputPorts = node.GetOutputPorts().Where(p => p.Name.StartsWith("Choice "));
 

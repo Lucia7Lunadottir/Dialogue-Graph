@@ -1,6 +1,6 @@
 {
   "name": "com.pg.dialogue-graph",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "displayName": "PG Dialogue Graph",
   "description": "Dialogue graph has been created with Unity Graph Toolkit. It is recommended to work with Unity 6.2 and newer.",
   "unity": "6000.4",

@@ -1,5 +1,7 @@
+using System;
 using PG.DialogueGraph;
 using UnityEngine;
+
 public class CursorForChoiceNodeActivator : MonoBehaviour
 {
     [SerializeField] private DialogueManager _manager;

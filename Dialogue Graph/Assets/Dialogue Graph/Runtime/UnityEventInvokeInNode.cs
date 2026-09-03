@@ -6,7 +6,8 @@ using UnityEngine.Events;
 public class UnityEventInvokeInNode : MonoBehaviour
 {
     [SerializeField] private DialogueManager _manager;
-
+    [SerializeField] private bool _findIfNull;
+    
     [Space(10)]
     [SerializeField] private DialogueEvent[] _events;
     public Dictionary<string, UnityEvent> events = new Dictionary<string, UnityEvent>();
@@ -22,6 +23,10 @@ public class UnityEventInvokeInNode : MonoBehaviour
     }
     private void Awake()
     {
+        if (_manager == null && _findIfNull)
+        {
+            _manager = FindAnyObjectByType<DialogueManager>();
+        }
         foreach (var e in _events)
         {
             events.Add(e.nodeKey, e.unityEvent);

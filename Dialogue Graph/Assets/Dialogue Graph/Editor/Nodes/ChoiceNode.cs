@@ -1,5 +1,7 @@
 using System;
 using Unity.GraphToolkit.Editor;
+using UnityEngine.Audio;
+
 namespace PG.DialogueGraphEditor
 {
     [Serializable]
@@ -13,6 +15,8 @@ namespace PG.DialogueGraphEditor
 
             context.AddInputPort<string>("Speaker").Build();
             context.AddInputPort<string>("Dialogue").AsTextArea(maxLines:10).Build();
+            context.AddInputPort<string>("AudioKey").Build();
+            context.AddInputPort<AudioResource>("Audio").Build();
 
             var option = GetNodeOptionByName(_OPTION_ID);
             option.TryGetValue(out int portCount);

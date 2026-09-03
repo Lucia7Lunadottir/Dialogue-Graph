@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Audio;
 
 namespace PG.DialogueGraph
 {
@@ -19,6 +20,8 @@ namespace PG.DialogueGraph
         public string dialogueText;
         public Sprite background;
         public List<ChoiceData> choices = new List<ChoiceData>();
+        public string audioKey;
+        public AudioResource audioResource;
         public string nextNodeID;
         public string jsonData;
     }
