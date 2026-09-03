@@ -10,6 +10,8 @@ public class AudioForDialogueNodeActivator : MonoBehaviour
     [SerializeField] private AudioSource _baseAudioSource;
     [SerializeField] private AudioData[] _datas;
     private Dictionary<string, AudioSource> _audioSources = new Dictionary<string, AudioSource>();
+    
+    [System.Serializable]
     public struct AudioData
     {
         public string name;
