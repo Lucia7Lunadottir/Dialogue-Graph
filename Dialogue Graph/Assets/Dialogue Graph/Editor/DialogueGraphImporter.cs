@@ -5,6 +5,7 @@ using UnityEditor.AssetImporters;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.Audio;
+using UnityEngine.Playables;
 
 namespace PG.DialogueGraphEditor
 {
@@ -16,7 +17,6 @@ namespace PG.DialogueGraphEditor
         public override void OnImportAsset(AssetImportContext ctx)
         {
             DialogueGraph editorGraph = GraphDatabase.LoadGraphForImporter<DialogueGraph>(ctx.assetPath);
-
             RuntimeDialogueGraph runtimeGraph = ScriptableObject.CreateInstance<RuntimeDialogueGraph>();
 
             var nodeIDMap = new Dictionary<INode, string>();
@@ -25,10 +25,12 @@ namespace PG.DialogueGraphEditor
                 nodeIDMap[node] = GUID.Generate().ToString();
             }
 
+            var exportContext = new ExportContext { nodeIDMap = nodeIDMap };
+
             var startNode = editorGraph.GetNodes().OfType<StartNode>().FirstOrDefault();
             if (startNode != null)
             {
-                var entryPort = startNode.GetOutputPorts().FirstOrDefault()?.FirstConnectedPort;
+                var entryPort = startNode.GetOutputPortByName("out")?.FirstConnectedPort;
                 if (entryPort != null)
                 {
                     runtimeGraph.entryNodeID = nodeIDMap[entryPort.GetNode()];
@@ -39,80 +41,45 @@ namespace PG.DialogueGraphEditor
             {
                 if (iNode is StartNode) continue;
 
-                var runtimeNode = new RuntimeDialogueNode { nodeID = nodeIDMap[iNode] };
-                switch (iNode)
+                if (iNode is IRuntimeExportable exportable)
                 {
-                    case DialogueNode:
-                        DialogueNode dialogueNode = (DialogueNode)iNode;
-                        ProcessDialogueNode(dialogueNode, runtimeNode, nodeIDMap);
-                        break;
-                    case ChoiceNode:
-                        ChoiceNode choiceNode = (ChoiceNode)iNode;
-                        ProcessChoiceNode(choiceNode, runtimeNode, nodeIDMap);
-                        break;
-                    case SetBackgroundNode:
-                        SetBackgroundNode backgroundNode = (SetBackgroundNode)iNode;
-                        ProcessSetBackgroundNode(backgroundNode, runtimeNode, nodeIDMap);
-                        break;
+                    var runtimeNode = exportable.CreateRuntimeNode();
+
+                    runtimeNode.nodeID = nodeIDMap[iNode];
+                    exportable.ExportToRuntime(runtimeNode, exportContext);
+
+                    var behavioursPort = iNode.GetOutputPortByName("Behaviours");
+                    if (behavioursPort != null)
+                    {
+                        var connectedPorts = new List<IPort>();
+                        behavioursPort.GetConnectedPorts(connectedPorts);
+
+                        foreach (var connectedPort in connectedPorts)
+                        {
+                            if (connectedPort.GetNode() is BehaviourNode behaviourNode)
+                            {
+                                var runtimeBehaviour = behaviourNode.CreateRuntimeBehaviour();
+                                behaviourNode.ExportToRuntime(runtimeBehaviour, exportContext);
+                                runtimeNode.behaviours.Add(runtimeBehaviour);
+                            }
+                        }
+                    }
+
+                    runtimeGraph.allNodes.Add(runtimeNode);
                 }
-
-
-                runtimeGraph.allNodes.Add(runtimeNode);
             }
+
+            foreach (var refKey in exportContext.usedRefKeys)
+            {
+                runtimeGraph.exposedReferenceSlots.Add(new ExposedReferenceSlotInfo
+                {
+                    key = refKey.Key,
+                    typeAssemblyQualifiedName = refKey.Value.AssemblyQualifiedName
+                });
+            }
+
             ctx.AddObjectToAsset("RuntimeData", runtimeGraph);
             ctx.SetMainObject(runtimeGraph);
-        }
-        private void ProcessDialogueNode(DialogueNode node, RuntimeDialogueNode runtimeNode, Dictionary<INode, string> nodeIDMap)
-        {
-            node.GetNodeOptionByName("Node Key").TryGetValue(out runtimeNode.nodeKey);
-            runtimeNode.speakerName = GetPortValue<string>(node.GetInputPortByName("Speaker"));
-            runtimeNode.dialogueText = GetPortValue<string>(node.GetInputPortByName("Dialogue"));
-            runtimeNode.audioKey = GetPortValue<string>(node.GetInputPortByName("AudioKey"));
-            runtimeNode.audioResource = GetPortValue<AudioResource>(node.GetInputPortByName("Audio"));
-
-            var nextNodePort = node.GetOutputPortByName("out").FirstConnectedPort;
-            if (nextNodePort != null)
-            {
-                runtimeNode.nextNodeID = nodeIDMap[nextNodePort.GetNode()];
-            }
-        }
-        private void ProcessSetBackgroundNode(SetBackgroundNode node, RuntimeDialogueNode runtimeNode, Dictionary<INode, string> nodeIDMap)
-        {
-            node.GetNodeOptionByName("Node Key").TryGetValue(out runtimeNode.nodeKey);
-            runtimeNode.background = GetPortValue<Sprite>(node.GetInputPortByName("Background"));
-
-            var nextNodePort = node.GetOutputPortByName("out").FirstConnectedPort;
-            if (nextNodePort != null)
-            {
-                runtimeNode.nextNodeID = nodeIDMap[nextNodePort.GetNode()];
-            }
-        }
-        private void ProcessChoiceNode(ChoiceNode node, RuntimeDialogueNode runtimeNode, Dictionary<INode, string> nodeIDMap)
-        {
-            node.GetNodeOptionByName("Node Key").TryGetValue(out runtimeNode.nodeKey);
-            runtimeNode.speakerName = GetPortValue<string>(node.GetInputPortByName("Speaker"));
-            runtimeNode.dialogueText = GetPortValue<string>(node.GetInputPortByName("Dialogue"));
-            runtimeNode.audioKey = GetPortValue<string>(node.GetInputPortByName("AudioKey"));
-            runtimeNode.audioResource = GetPortValue<AudioResource>(node.GetInputPortByName("Audio"));
-
-            var choiceOutputPorts = node.GetOutputPorts().Where(p => p.Name.StartsWith("Choice "));
-
-            foreach (var outputPort in choiceOutputPorts)
-            {
-                var index = outputPort.Name.Substring("Choice ".Length);
-                var textPort = node.GetInputPortByName($"Choice Text {index}");
-
-                var choiceData = new ChoiceData
-                {
-                    choiceText = GetPortValue<string>(textPort),
-                    desinationNodeID = outputPort.FirstConnectedPort != null
-                        ? nodeIDMap[outputPort.FirstConnectedPort.GetNode()]
-                        : null
-                };
-
-                runtimeNode.choices.Add(choiceData);
-            }
-
         }
 
         private T GetPortValue<T>(IPort port)

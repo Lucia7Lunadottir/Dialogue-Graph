@@ -5,9 +5,57 @@ using UnityEngine.InputSystem;
 using UnityEngine.UI;
 namespace PG.DialogueGraph
 {
-    public class DialogueManager : MonoBehaviour
+    public class DialogueManager : MonoBehaviour, IExposedPropertyTable
     {
         [SerializeField] protected RuntimeDialogueGraph _graph;
+        public RuntimeDialogueGraph Graph => _graph;
+
+        [SerializeField] private List<ExposedReferenceEntry> _exposedReferences = new();
+        private Dictionary<PropertyName, Object> _exposedReferenceLookup;
+
+        [System.Serializable]
+        public struct ExposedReferenceEntry
+        {
+            public string id;
+            public Object value;
+        }
+
+        public Object GetReferenceValue(PropertyName id, out bool idValid)
+        {
+            BuildExposedReferenceLookup();
+            idValid = _exposedReferenceLookup.TryGetValue(id, out var value);
+            return value;
+        }
+
+        public void SetReferenceValue(PropertyName id, Object value)
+        {
+            BuildExposedReferenceLookup();
+            _exposedReferenceLookup[id] = value;
+
+            var idString = id.ToString();
+            var index = _exposedReferences.FindIndex(e => e.id == idString);
+            var entry = new ExposedReferenceEntry { id = idString, value = value };
+            if (index >= 0) _exposedReferences[index] = entry;
+            else _exposedReferences.Add(entry);
+        }
+
+        public void ClearReferenceValue(PropertyName id)
+        {
+            BuildExposedReferenceLookup();
+            _exposedReferenceLookup.Remove(id);
+            _exposedReferences.RemoveAll(e => e.id == id.ToString());
+        }
+
+        private void BuildExposedReferenceLookup()
+        {
+            if (_exposedReferenceLookup != null) return;
+            _exposedReferenceLookup = new Dictionary<PropertyName, Object>();
+            foreach (var entry in _exposedReferences)
+            {
+                _exposedReferenceLookup[new PropertyName(entry.id)] = entry.value;
+            }
+        }
+
         [SerializeField] protected InputActionProperty _nextDialogueProperty;
         protected InputAction _nextDialogueAction;
 
@@ -22,17 +70,19 @@ namespace PG.DialogueGraph
         [SerializeField] protected Button _choiceButtonPrefab;
         [SerializeField] protected Transform _choiceButtonContainer;
 
-        protected Dictionary<string, RuntimeDialogueNode> _nodeLookup = new Dictionary<string, RuntimeDialogueNode>();
-        public RuntimeDialogueNode currentDialogueNode { get; protected set; }
+        protected Dictionary<string, RuntimeBaseNode> _nodeLookup = new Dictionary<string, RuntimeBaseNode>();
+        public RuntimeBaseNode currentBaseNode { get; protected set; }
 
         public event System.Action<RuntimeDialogueGraph> dialogueStarted;
-        public event System.Action<RuntimeDialogueNode> dialogueChanged;
-        public event System.Action<RuntimeDialogueNode> previousDialogueChanged;
+        public event System.Action<RuntimeBaseNode> dialogueChanged;
+        public event System.Action<RuntimeBaseNode> previousDialogueChanged;
         public event System.Action dialogueEnded;
+        public event System.Action<string> nodeBehaviourEvent;
+        public void InvokeNodeBehaviourEvent(string key) => nodeBehaviourEvent?.Invoke(key);
 
         #region Invoke event Actions
-        protected void InvokePreviousDialogueChanged(RuntimeDialogueNode runtimeDialogueNode) => previousDialogueChanged?.Invoke(runtimeDialogueNode);
-        protected void InvokeDialogueChanged(RuntimeDialogueNode runtimeDialogueNode) => dialogueChanged?.Invoke(runtimeDialogueNode);
+        protected void InvokePreviousDialogueChanged(RuntimeBaseNode runtimeDialogueNode) => previousDialogueChanged?.Invoke(runtimeDialogueNode);
+        protected void InvokeDialogueChanged(RuntimeBaseNode runtimeDialogueNode) => dialogueChanged?.Invoke(runtimeDialogueNode);
         protected void InvokeDialogueStarted(RuntimeDialogueGraph runtimeDialogueGraph) => dialogueStarted?.Invoke(runtimeDialogueGraph);
         protected void InvokeDialogueEnded() => dialogueEnded?.Invoke(); 
         #endregion
@@ -50,82 +100,118 @@ namespace PG.DialogueGraph
                 StartDialogue(_graph);
             }
         }
-        protected virtual void ShowNode(string nodeID)
+        protected void ShowNode(string nodeID)
         {
             if (!_nodeLookup.ContainsKey(nodeID))
             {
                 return;
             }
-            currentDialogueNode = _nodeLookup[nodeID];
 
+            var previousNode = currentBaseNode;
+            currentBaseNode = _nodeLookup[nodeID];
 
-            dialogueChanged?.Invoke(_nodeLookup[currentDialogueNode.nodeID]);
-
-            if (currentDialogueNode != null)
+            if (previousNode != null)
             {
-                _speakerNameObject.SetText(currentDialogueNode.speakerName);
-                _dialogueTextObject.SetText(currentDialogueNode.dialogueText);
-                _dialoguePanel.SetActive(true);
-
-
-                foreach (Transform child in _choiceButtonContainer)
+                foreach (var behaviour in previousNode.behaviours)
                 {
-                    Destroy(child.gameObject);
+                    behaviour.OnExit(this);
                 }
-
-                if (currentDialogueNode.choices.Count > 0)
-                {
-                    foreach (var choice in currentDialogueNode.choices)
-                    {
-                        Button button = Instantiate(_choiceButtonPrefab, _choiceButtonContainer);
-
-                        TMP_Text buttonText = button.GetComponentInChildren<TMP_Text>();
-                        if (buttonText != null)
-                        {
-                            buttonText.text = choice.choiceText;
-                        }
-
-                        if (button != null)
-                        {
-                            button.onClick.AddListener(() =>
-                            {
-                                if (!string.IsNullOrEmpty(choice.desinationNodeID))
-                                {
-                                    ShowNode(choice.desinationNodeID);
-                                }
-                                else
-                                {
-                                    EndDialogue();
-                                }
-                            });
-                        }
-                    }
-                }
-
             }
+
+            dialogueChanged?.Invoke(currentBaseNode);
+
+            if (currentBaseNode is RuntimeDialogueNode runtimeDialogueNode)
+            {
+                ShowUI(runtimeDialogueNode.speakerName, runtimeDialogueNode.dialogueText);
+                RemoveChoices();
+
+                if (runtimeDialogueNode is RuntimeChoiceNode runtimeChoiceNode && runtimeChoiceNode.choices.Count > 0)
+                {
+                    RebuildChoices(runtimeChoiceNode);
+                }
+            }
+
+            foreach (var behaviour in currentBaseNode.behaviours)
+            {
+                behaviour.OnEnter(this);
+            }
+
+            currentBaseNode.Execute(this);
         }
 
-        protected void EndDialogue()
+        public virtual void ShowUI(string speaker, string dialogue)
+        {
+            _speakerNameObject.SetText(speaker);
+            _dialogueTextObject.SetText(dialogue);
+            _dialoguePanel.SetActive(true);
+        }
+
+        public void HideUI()
         {
             _speakerNameObject.SetText("");
             _dialogueTextObject.SetText("");
 
             _dialoguePanel.SetActive(false);
+            RemoveChoices();
+        }
+
+        public virtual void RebuildChoices(RuntimeChoiceNode runtimeChoiceNode)
+        {
+            foreach (var choice in runtimeChoiceNode.choices)
+            {
+                Button button = Instantiate(_choiceButtonPrefab, _choiceButtonContainer);
+
+                TMP_Text buttonText = button.GetComponentInChildren<TMP_Text>();
+                if (buttonText != null)
+                {
+                    buttonText.text = choice.choiceText;
+                }
+
+                if (button != null)
+                {
+                    button.onClick.AddListener(() =>
+                    {
+                        if (!string.IsNullOrEmpty(choice.desinationNodeID))
+                        {
+                            ShowNode(choice.desinationNodeID);
+                        }
+                        else
+                        {
+                            EndDialogue();
+                        }
+                    });
+                }
+            }
+        }
+        public void RemoveChoices()
+        {
             foreach (Transform item in _choiceButtonContainer)
             {
                 Destroy(item.gameObject);
             }
+        }
 
+        protected void EndDialogue()
+        {
+            HideUI();
 
-            currentDialogueNode = null;
+            if (currentBaseNode != null)
+            {
+                foreach (var behaviour in currentBaseNode.behaviours)
+                {
+                    behaviour.OnExit(this);
+                }
+            }
+
+            currentBaseNode = null;
             dialogueEnded?.Invoke();
 
-            _nextDialogueAction.performed -= NextDialogue;
+            _nextDialogueAction.performed -= NextDialogueInput;
         }
         public void StartDialogue() => StartDialogue(_graph);
         public void StartDialogue(RuntimeDialogueGraph runtimeDialogueGraph)
         {
-            if (currentDialogueNode != null)
+            if (currentBaseNode != null)
             {
                 EndDialogue();
             }
@@ -146,22 +232,27 @@ namespace PG.DialogueGraph
                 EndDialogue();
             }
 
-            _nextDialogueAction.performed += NextDialogue;
+            _nextDialogueAction.performed += NextDialogueInput;
         }
         // Update is called once per frame
-        void NextDialogue(InputAction.CallbackContext context)
+        void NextDialogueInput(InputAction.CallbackContext context)
         {
-            if (currentDialogueNode != null && currentDialogueNode.choices.Count == 0)
+            if (currentBaseNode != null && currentBaseNode is RuntimeDialogueNode && currentBaseNode is not RuntimeChoiceNode)
             {
-                if (!string.IsNullOrEmpty(currentDialogueNode.nextNodeID))
-                {
-                    InvokePreviousDialogueChanged(currentDialogueNode);
-                    ShowNode(currentDialogueNode.nextNodeID);
-                }
-                else
-                {
-                    EndDialogue();
-                }
+                NextDialogue();
+            }
+        }
+
+        public void NextDialogue()
+        {
+            if (!string.IsNullOrEmpty(currentBaseNode.nextNodeID))
+            {
+                InvokePreviousDialogueChanged(currentBaseNode);
+                ShowNode(currentBaseNode.nextNodeID);
+            }
+            else
+            {
+                EndDialogue();
             }
         }
     }

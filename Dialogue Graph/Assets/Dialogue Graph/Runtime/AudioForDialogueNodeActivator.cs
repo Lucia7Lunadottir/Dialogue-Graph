@@ -1,30 +1,12 @@
 using System.Collections.Generic;
 using PG.DialogueGraph;
 using UnityEngine;
-using UnityEngine.Audio;
 
 public class AudioForDialogueNodeActivator : MonoBehaviour
 {
     [SerializeField] private DialogueManager _manager;
-    [SerializeField] private bool _checkAudioTag;
     [SerializeField] private AudioSource _baseAudioSource;
-    [SerializeField] private AudioData[] _datas;
-    private Dictionary<string, AudioSource> _audioSources = new Dictionary<string, AudioSource>();
-    
-    [System.Serializable]
-    public struct AudioData
-    {
-        public string name;
-        public AudioSource audioSource;
-    }
-
-    private void Awake()
-    {
-        foreach (var data in _datas)
-        {
-            _audioSources.Add(data.name, data.audioSource);
-        }
-    }
+    private readonly HashSet<AudioSource> _usedAudioSources = new();
 
     private void OnEnable()
     {
@@ -36,48 +18,33 @@ public class AudioForDialogueNodeActivator : MonoBehaviour
         _manager.dialogueChanged -= UpdateAudio;
         _manager.dialogueEnded -= StopAllAudio;
     }
-    // Update is called once per frame
-    void UpdateAudio(RuntimeDialogueNode runtimeDialogueNode)
+
+    void UpdateAudio(RuntimeBaseNode runtimeBaseNode)
     {
-        if (runtimeDialogueNode.audioResource == null)
+        if (runtimeBaseNode is not RuntimeDialogueNode runtimeDialogueNode || runtimeDialogueNode.audioResource == null)
         {
             return;
         }
-        if (_checkAudioTag)
+
+        StopAllAudio();
+
+        AudioSource audioSource = runtimeDialogueNode.audioSource.Resolve(_manager);
+        if (audioSource == null)
         {
-            StopAllAudio();
-            if (_audioSources.TryGetValue(runtimeDialogueNode.audioKey, out AudioSource audioSource))
-            {
-                audioSource.resource = runtimeDialogueNode.audioResource;
-                audioSource.Play();
-            }
-            else
-            {
-                PlayBaseAudio(runtimeDialogueNode.audioResource);
-            }
+            audioSource = _baseAudioSource;
         }
-        else
-        {
-            PlayBaseAudio(runtimeDialogueNode.audioResource);
-        }
+
+        audioSource.resource = runtimeDialogueNode.audioResource;
+        audioSource.Play();
+        _usedAudioSources.Add(audioSource);
     }
 
-    void PlayBaseAudio(AudioResource audioResource)
-    {
-        _baseAudioSource.Stop();
-        _baseAudioSource.resource = audioResource;
-        _baseAudioSource.Play();
-    }
     void StopAllAudio()
     {
         _baseAudioSource.Stop();
-        foreach (var data in _datas)
+        foreach (var audioSource in _usedAudioSources)
         {
-            if (data.audioSource == null)
-            {
-                continue;
-            }
-            data.audioSource.Stop();
+            audioSource.Stop();
         }
     }
 }

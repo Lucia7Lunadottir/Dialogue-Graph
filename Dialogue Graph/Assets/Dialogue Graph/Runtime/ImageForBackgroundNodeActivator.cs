@@ -15,11 +15,11 @@ public class ImageForBackgroundNodeActivator : MonoBehaviour
         _manager.dialogueChanged -= UpdateImage;
     }
     // Update is called once per frame
-    void UpdateImage(RuntimeDialogueNode runtimeDialogueNode)
+    void UpdateImage(RuntimeBaseNode runtimeBaseNode)
     {
-        if (runtimeDialogueNode.background != null)
+        if (runtimeBaseNode is RuntimeBackgroundNode runtimeBackgroundNode)
         {
-            _image.sprite = runtimeDialogueNode.background;
+            _image.sprite = runtimeBackgroundNode.background;
         }
     }
 }

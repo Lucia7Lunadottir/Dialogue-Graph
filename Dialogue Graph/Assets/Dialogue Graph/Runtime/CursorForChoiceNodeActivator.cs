@@ -14,9 +14,9 @@ public class CursorForChoiceNodeActivator : MonoBehaviour
         _manager.dialogueChanged -= UpdateCursor;
     }
     // Update is called once per frame
-    void UpdateCursor(RuntimeDialogueNode runtimeDialogueNode)
+    void UpdateCursor(RuntimeBaseNode runtimeDialogueNode)
     {
-        if (runtimeDialogueNode.choices.Count > 0)
+        if (runtimeDialogueNode is RuntimeChoiceNode)
         {
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;

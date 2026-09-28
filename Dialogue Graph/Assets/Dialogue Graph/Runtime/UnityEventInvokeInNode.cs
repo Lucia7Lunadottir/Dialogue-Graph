@@ -10,7 +10,7 @@ public class UnityEventInvokeInNode : MonoBehaviour
     
     [Space(10)]
     [SerializeField] private DialogueEvent[] _events;
-    public Dictionary<string, UnityEvent> events = new Dictionary<string, UnityEvent>();
+    [System.NonSerialized] public Dictionary<string, UnityEvent> events = new Dictionary<string, UnityEvent>();
 
     [Header("End")]
     [SerializeField] private bool _invokeEventAfterEndDialogue;
@@ -33,6 +33,7 @@ public class UnityEventInvokeInNode : MonoBehaviour
         }
         _manager.dialogueStarted += DialogueStarted;
         _manager.dialogueEnded += DialogueEnded;
+        _manager.nodeBehaviourEvent += OnInvoke;
         if (_invokeEventAfterEndDialogue)
         {
             _manager.dialogueEnded += OnEndInvoke;
@@ -42,6 +43,7 @@ public class UnityEventInvokeInNode : MonoBehaviour
     {
         _manager.dialogueStarted -= DialogueStarted;
         _manager.dialogueEnded -= DialogueEnded;
+        _manager.nodeBehaviourEvent -= OnInvoke;
         if (_invokeEventAfterEndDialogue)
         {
             _manager.dialogueEnded -= OnEndInvoke;
@@ -55,7 +57,7 @@ public class UnityEventInvokeInNode : MonoBehaviour
     {
         _manager.dialogueChanged -= NodeEventInvoke;
     }
-    void NodeEventInvoke(RuntimeDialogueNode node)
+    void NodeEventInvoke(RuntimeBaseNode node)
     {
         if (node != null && events.TryGetValue(node.nodeKey, out UnityEvent unityEvent))
         {
@@ -64,7 +66,10 @@ public class UnityEventInvokeInNode : MonoBehaviour
     }
     public void OnInvoke(string nodeKey)
     {
-        events[nodeKey]?.Invoke();
+        if (events.TryGetValue(nodeKey, out UnityEvent unityEvent))
+        {
+            unityEvent?.Invoke();
+        }
     }
     public void OnEndInvoke()
     {
