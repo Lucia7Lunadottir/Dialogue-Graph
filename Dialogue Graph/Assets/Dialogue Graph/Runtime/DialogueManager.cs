@@ -223,6 +223,10 @@ namespace PG.DialogueGraph
                 _nodeLookup[node.nodeID] = node;
             }
 
+            // До ShowNode: диалог может закончиться сразу (EndNode) - EndDialogue отпишет, а не останется висящая подписка
+            _nextDialogueAction.performed -= NextDialogueInput;
+            _nextDialogueAction.performed += NextDialogueInput;
+
             if (!string.IsNullOrEmpty(_graph.entryNodeID))
             {
                 ShowNode(_graph.entryNodeID);
@@ -231,8 +235,6 @@ namespace PG.DialogueGraph
             {
                 EndDialogue();
             }
-
-            _nextDialogueAction.performed += NextDialogueInput;
         }
         // Update is called once per frame
         void NextDialogueInput(InputAction.CallbackContext context)

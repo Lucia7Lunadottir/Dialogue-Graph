@@ -108,6 +108,15 @@ namespace PG.DialogueGraph
         }
     }
     [Serializable]
+    public class RuntimeEndNode : RuntimeBaseNode
+    {
+        // Behaviours уже сработали (OnEnter); выхода нет - NextDialogue закрывает диалог, OnExit сработает там
+        public override void Execute(DialogueManager manager)
+        {
+            manager.NextDialogue();
+        }
+    }
+    [Serializable]
     public class RuntimeBackgroundNode : RuntimeBaseNode
     {
         public Sprite background;
