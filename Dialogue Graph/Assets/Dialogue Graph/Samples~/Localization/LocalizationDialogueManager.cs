@@ -1,65 +1,48 @@
+using PG.Localization;
 using TMPro;
-using UnityEngine;
 using UnityEngine.UI;
+
 namespace PG.DialogueGraph
 {
-    using LocalizationSystem;
+    // DialogueManager, у которого имя говорящего, реплика и варианты ответа - ключи PG Localization System
     public class LocalizationDialogueManager : DialogueManager
     {
-        protected override void ShowNode(string nodeID)
+        public override void ShowUI(string speaker, string dialogue)
         {
-            if (!_nodeLookup.ContainsKey(nodeID))
+            base.ShowUI(Localize(speaker), Localize(dialogue));
+        }
+
+        public override void RebuildChoices(RuntimeChoiceNode runtimeChoiceNode)
+        {
+            foreach (var choice in runtimeChoiceNode.choices)
             {
-                return;
-            }
-            currentDialogueNode = _nodeLookup[nodeID];
+                Button button = Instantiate(_choiceButtonPrefab, _choiceButtonContainer);
 
-
-            InvokeDialogueChanged(_nodeLookup[currentDialogueNode.nodeID]);
-
-            if (currentDialogueNode != null)
-            {
-                _speakerNameObject.SetText(LocalizationSystem.instance.GetLocalizedValue(currentDialogueNode.speakerName));
-                _dialogueTextObject.SetText(LocalizationSystem.instance.GetLocalizedValue(currentDialogueNode.dialogueText));
-                _dialoguePanel.SetActive(true);
-
-
-                foreach (Transform child in _choiceButtonContainer)
+                TMP_Text buttonText = button.GetComponentInChildren<TMP_Text>();
+                if (buttonText != null)
                 {
-                    Destroy(child.gameObject);
+                    buttonText.text = Localize(choice.choiceText);
                 }
 
-                if (currentDialogueNode.choices.Count > 0)
+                button.onClick.AddListener(() =>
                 {
-                    foreach (var choice in currentDialogueNode.choices)
+                    if (!string.IsNullOrEmpty(choice.desinationNodeID))
                     {
-                        Button button = Instantiate(_choiceButtonPrefab, _choiceButtonContainer);
-
-                        TMP_Text buttonText = button.GetComponentInChildren<TMP_Text>();
-                        if (buttonText != null)
-                        {
-                            buttonText.text = choice.choiceText;
-                        }
-
-                        if (button != null)
-                        {
-                            button.onClick.AddListener(() =>
-                            {
-                                if (!string.IsNullOrEmpty(choice.desinationNodeID))
-                                {
-                                    ShowNode(choice.desinationNodeID);
-                                }
-                                else
-                                {
-                                    EndDialogue();
-                                }
-                            });
-                        }
+                        ShowNode(choice.desinationNodeID);
                     }
-                }
-
+                    else
+                    {
+                        EndDialogue();
+                    }
+                });
             }
         }
 
+        // Нет системы локализации или ключа - показываем текст как есть
+        private static string Localize(string key)
+        {
+            if (string.IsNullOrEmpty(key) || LocalizationSystem.instance == null) return key;
+            return LocalizationSystem.instance.GetLocalizedValue(key, key);
+        }
     }
 }
