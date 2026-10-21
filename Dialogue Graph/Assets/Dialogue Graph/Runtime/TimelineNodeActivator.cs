@@ -2,9 +2,9 @@ using PG.DialogueGraph;
 using UnityEngine;
 using UnityEngine.Playables;
 
-// Запускает таймлайн ноды TimelineNode и ведёт диалог дальше, когда он доиграл.
-// Wrap Mode None - конец по stopped. Hold - конец по времени: последний кадр держится (например, под выбором ответа),
-// пока не начнётся следующий таймлайн на другом директоре или не закончится диалог.
+// Запускает таймлайн ноды TimelineNode и ведёт диалог дальше, когда он доиграл. Wrap Mode директора ставит нода:
+// Hold Last Frame выключен - None, конец по stopped; включён - Hold, конец по времени, последний кадр держится
+// (например, под выбором ответа), пока не начнётся таймлайн на другом директоре или не закончится диалог.
 public class TimelineNodeActivator : MonoBehaviour
 {
     [SerializeField] private DialogueManager _manager;
@@ -50,6 +50,7 @@ public class TimelineNodeActivator : MonoBehaviour
             }
             _held = null;
 
+            playableDirector.extrapolationMode = runtimeTimelineNode.holdLastFrame ? DirectorWrapMode.Hold : DirectorWrapMode.None;
             // Подписка после Play: на одном директоре смена таймлайна может прислать stopped от предыдущего
             playableDirector.Play(runtimeTimelineNode.timeline);
             _playing = playableDirector;
@@ -61,7 +62,7 @@ public class TimelineNodeActivator : MonoBehaviour
     // Hold не присылает stopped в конце - доигрывание ловим по времени
     private void Update()
     {
-        if (_playing == null || _playing.extrapolationMode != DirectorWrapMode.Hold) return;
+        if (_playing == null || _node == null || !_node.holdLastFrame) return;
         if (_playing.state != PlayState.Playing || _playing.time < _playing.duration) return;
         // До Finish: следующая нода может сразу запустить другой таймлайн и отпустить этот кадр
         _held = _playing;

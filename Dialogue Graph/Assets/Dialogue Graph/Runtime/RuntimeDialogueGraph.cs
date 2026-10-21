@@ -101,6 +101,8 @@ namespace PG.DialogueGraph
     {
         public PlayableAsset timeline;
         public ExposedReference<PlayableDirector> director;
+        // Hold Last Frame: после конца держать последний кадр, пока не начнётся другой таймлайн или не кончится диалог
+        public bool holdLastFrame;
         public override void Execute(DialogueManager manager)
         {
         }

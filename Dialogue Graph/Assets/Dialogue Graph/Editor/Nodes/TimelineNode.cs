@@ -21,6 +21,8 @@ namespace PG.DialogueGraphEditor
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
             context.AddOption<string>("Node Key").Delayed().Build();
+            // Держать последний кадр после конца (например, под выбором ответа); выключено - таймлайн отпускает сцену
+            context.AddOption<bool>("Hold Last Frame").Build();
         }
 
         public override RuntimeBaseNode CreateRuntimeNode()
@@ -34,6 +36,7 @@ namespace PG.DialogueGraphEditor
             if (runtimeNode is RuntimeTimelineNode runtimeTimelineNode)
             {
                 runtimeTimelineNode.timeline = context.GetPortValue<PlayableAsset>(GetInputPortByName("Timeline"));
+                GetNodeOptionByName("Hold Last Frame").TryGetValue(out runtimeTimelineNode.holdLastFrame);
 
                 var directorRefKey = context.GetRefKey<PlayableDirector>(GetInputPortByName("Director Ref"));
                 runtimeTimelineNode.director = new ExposedReference<PlayableDirector> { exposedName = new PropertyName(directorRefKey) };

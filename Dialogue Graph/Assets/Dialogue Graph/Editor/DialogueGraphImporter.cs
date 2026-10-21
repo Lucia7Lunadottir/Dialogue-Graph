@@ -11,7 +11,7 @@ namespace PG.DialogueGraphEditor
 {
     using PG.DialogueGraph;
 
-    [ScriptedImporter(1, DialogueGraph.ASSET_EXTENSION)]
+    [ScriptedImporter(2, DialogueGraph.ASSET_EXTENSION)]
     public class DialogueGraphImporter : ScriptedImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)
