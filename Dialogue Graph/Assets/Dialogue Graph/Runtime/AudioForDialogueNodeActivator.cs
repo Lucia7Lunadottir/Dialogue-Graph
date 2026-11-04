@@ -21,7 +21,12 @@ public class AudioForDialogueNodeActivator : MonoBehaviour
 
     void UpdateAudio(RuntimeBaseNode runtimeBaseNode)
     {
-        if (runtimeBaseNode is not RuntimeDialogueNode runtimeDialogueNode || runtimeDialogueNode.audioResource == null)
+        if (runtimeBaseNode is not RuntimeDialogueNode runtimeDialogueNode)
+        {
+            return;
+        }
+        var audioResource = runtimeDialogueNode.GetAudioResource(_manager);
+        if (audioResource == null)
         {
             return;
         }
@@ -34,7 +39,7 @@ public class AudioForDialogueNodeActivator : MonoBehaviour
             audioSource = _baseAudioSource;
         }
 
-        audioSource.resource = runtimeDialogueNode.audioResource;
+        audioSource.resource = audioResource;
         audioSource.Play();
         _usedAudioSources.Add(audioSource);
     }

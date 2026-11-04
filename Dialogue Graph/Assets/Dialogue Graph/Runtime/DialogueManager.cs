@@ -72,6 +72,8 @@ namespace PG.DialogueGraph
 
         protected Dictionary<string, RuntimeBaseNode> _nodeLookup = new Dictionary<string, RuntimeBaseNode>();
         public RuntimeBaseNode currentBaseNode { get; protected set; }
+        // Кнопка «Дальше» не листает текущую реплику (её ведёт код); сбрасывается на каждой новой реплике и в конце диалога
+        public bool inputAdvanceLocked { get; set; }
 
         public event System.Action<RuntimeDialogueGraph> dialogueStarted;
         public event System.Action<RuntimeBaseNode> dialogueChanged;
@@ -118,6 +120,7 @@ namespace PG.DialogueGraph
                 }
             }
 
+            inputAdvanceLocked = false;
             dialogueChanged?.Invoke(currentBaseNode);
 
             if (currentBaseNode is RuntimeDialogueNode runtimeDialogueNode)
@@ -204,6 +207,7 @@ namespace PG.DialogueGraph
             }
 
             currentBaseNode = null;
+            inputAdvanceLocked = false;
             dialogueEnded?.Invoke();
 
             _nextDialogueAction.performed -= NextDialogueInput;
@@ -239,7 +243,7 @@ namespace PG.DialogueGraph
         // Update is called once per frame
         void NextDialogueInput(InputAction.CallbackContext context)
         {
-            if (currentBaseNode != null && currentBaseNode is RuntimeDialogueNode && currentBaseNode is not RuntimeChoiceNode)
+            if (!inputAdvanceLocked && currentBaseNode != null && currentBaseNode is RuntimeDialogueNode && currentBaseNode is not RuntimeChoiceNode)
             {
                 NextDialogue();
             }

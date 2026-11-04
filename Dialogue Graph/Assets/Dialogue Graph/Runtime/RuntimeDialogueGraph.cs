@@ -42,6 +42,12 @@ namespace PG.DialogueGraph
         }
     }
 
+    // Behaviour, который подменяет звук реплики (например, озвучка на языке игры); null - звук самой ноды
+    public interface IAudioResourceProvider
+    {
+        AudioResource GetAudioResource(DialogueManager manager);
+    }
+
     [Serializable]
     public class RuntimeUnityEventBehaviour : RuntimeNodeBehaviour
     {
@@ -94,6 +100,20 @@ namespace PG.DialogueGraph
         public ExposedReference<AudioSource> audioSource;
         public override void Execute(DialogueManager manager)
         {
+        }
+
+        // Звук реплики: первый IAudioResourceProvider среди behaviours, иначе audioResource
+        public AudioResource GetAudioResource(DialogueManager manager)
+        {
+            foreach (var behaviour in behaviours)
+            {
+                if (behaviour is IAudioResourceProvider provider)
+                {
+                    var resource = provider.GetAudioResource(manager);
+                    if (resource != null) return resource;
+                }
+            }
+            return audioResource;
         }
     }
     [Serializable]
